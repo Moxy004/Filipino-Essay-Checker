@@ -1,0 +1,6 @@
+# API Keys
+.env
+
+# Dependencies
+node_modules/
+

@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="fil">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filipino Essay Checker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .correction {
+            background: linear-gradient(to bottom, transparent 60%, rgba(255, 193, 7, 0.3) 60%);
+            border-bottom: 2px solid #ffc107;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .correction:hover {
+            background: linear-gradient(to bottom, transparent 50%, rgba(102, 126, 234, 0.3) 50%) !important;
+            transform: scale(1.02);
+        }
+
+        .correction.error {
+            background: linear-gradient(to bottom, transparent 60%, rgba(220, 53, 69, 0.2) 60%);
+            border-bottom-color: #dc3545;
+        }
+
+        .correction.grammar {
+            background: linear-gradient(to bottom, transparent 60%, rgba(40, 167, 69, 0.2) 60%);
+            border-bottom-color: #28a745;
+        }
+
+        .correction.style {
+            background: linear-gradient(to bottom, transparent 60%, rgba(23, 162, 184, 0.2) 60%);
+            border-bottom-color: #17a2b8;
+        }
+
+        .editor-content {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 12pt;
+            line-height: 2;
+            text-align: justify;
+        }
+
+        .editor-content p {
+            margin-bottom: 1em;
+        }
+
+        .hover-popup {
+            position: fixed;
+            z-index: 50;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 0.75rem;
+            max-width: 280px;
+            pointer-events: none;
+            animation: slideIn 0.15s ease-out;
+            border-left: 4px solid #667eea;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hover-type {
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .hover-type.error {
+            color: #dc2626;
+        }
+
+        .hover-type.grammar {
+            color: #16a34a;
+        }
+
+        .hover-type.style {
+            color: #2563eb;
+        }
+
+        .hover-from {
+            color: #dc2626;
+            text-decoration: line-through;
+            font-weight: 500;
+        }
+
+        .hover-to {
+            color: #16a34a;
+            font-weight: 600;
+        }
+
+        .tooltip-fixed {
+            position: fixed;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 60;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 1.25rem;
+            width: 400px;
+            max-width: calc(100vw - 40px);
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: expandIn 0.2s ease-out;
+            border-top: 4px solid #667eea;
+        }
+
+        @keyframes expandIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50%) scale(0.9);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(-50%) scale(1);
+            }
+        }
+
+        .tooltip-box {
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .tooltip-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 0.4rem;
+        }
+
+        .tooltip-original {
+            background: #fee2e2;
+            border: 1px solid #fecaca;
+        }
+
+        .tooltip-original .tooltip-label {
+            color: #991b1b;
+        }
+
+        .tooltip-original .tooltip-text {
+            color: #7f1d1d;
+            text-decoration: line-through;
+        }
+
+        .tooltip-suggestion {
+            background: #d1fae5;
+            border: 1px solid #a7f3d0;
+        }
+
+        .tooltip-suggestion .tooltip-label {
+            color: #065f46;
+        }
+
+        .tooltip-suggestion .tooltip-text {
+            color: #064e3b;
+            font-weight: 600;
+        }
+
+        .tooltip-explanation {
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
+        }
+
+        .tooltip-explanation .tooltip-label {
+            color: #374151;
+        }
+
+        .tooltip-explanation .tooltip-text {
+            color: #4b5563;
+            line-height: 1.6;
+        }
+
+        .btn {
+            padding: 0.65rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+            color: white;
+            flex: 1;
+        }
+
+        .btn-accept {
+            background: #22c55e;
+        }
+
+        .btn-accept:hover {
+            background: #16a34a;
+            transform: translateY(-1px);
+        }
+
+        .btn-reject {
+            background: #ef4444;
+        }
+
+        .btn-reject:hover {
+            background: #dc2626;
+            transform: translateY(-1px);
+        }
+
+        .btn-skip {
+            background: #9ca3af;
+        }
+
+        .btn-skip:hover {
+            background: #6b7280;
+            transform: translateY(-1px);
+        }
+
+        .grade-display {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            padding: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .grade-score {
+            font-size: 4rem;
+            font-weight: 900;
+        }
+
+        .rubric-card {
+            background: white;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            border: 2px solid;
+            transition: all 0.2s;
+        }
+
+        .rubric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .rubric-score {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .strength-item {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            background: #f0fdf4;
+            border-left: 4px solid #22c55e;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .improvement-item {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+
+        <div class="text-center text-white mb-10">
+            <h1 class="text-5xl font-bold mb-3">📝 Filipino Konseptong Papel Checker</h1>
+            <p class="text-xl opacity-90">Interactive grading with rubric-based evaluation</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+            <div class="lg:col-span-2 bg-white rounded-2xl shadow-2xl p-8">
+                <div class="flex items-center gap-3 mb-6">
+                    <span class="text-3xl">✍️</span>
+                    <h2 class="text-2xl font-bold text-purple-700">Iyong Konseptong Papel</h2>
+                </div>
+
+                <textarea id="essay"
+                    class="w-full h-96 p-4 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none resize-none font-times text-base leading-loose"
+                    placeholder="Ilagay dito ang iyong konseptong papel...
+
+Dapat mayroon:
+- Pamagat
+- Panimula
+- Rasyonal/Suliranin
+- Layunin
+- Metodolohiya"></textarea>
+
+                <div class="text-right text-sm text-gray-500 mt-2">
+                    <span id="charCount">0</span> characters
+                </div>
+
+                <button onclick="loadSample()"
+                    class="mt-4 w-full bg-yellow-400 hover:bg-yellow-500 text-gray-800 font-semibold py-3 rounded-lg transition-all">
+                    📄 Load Sample Essay
+                </button>
+
+                <div class="flex gap-3 mt-4">
+                    <button id="checkBtn" onclick="checkEssay()"
+                        class="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg">
+                        🔍 Check & Grade
+                    </button>
+                    <button onclick="clearAll()"
+                        class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-4 rounded-xl transition-all">
+                        🗑️ Clear
+                    </button>
+                </div>
+
+                <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-3">Rubric Categories (20 points):</h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex items-center gap-2">
+                            <div
+                                class="w-6 h-6 bg-purple-100 border-2 border-purple-500 rounded flex items-center justify-center text-xs font-bold">
+                                5</div>
+                            <span><strong>Nilalaman</strong> - Content & completeness</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div
+                                class="w-6 h-6 bg-blue-100 border-2 border-blue-500 rounded flex items-center justify-center text-xs font-bold">
+                                5</div>
+                            <span><strong>Kaisahan</strong> - Unity & coherence</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div
+                                class="w-6 h-6 bg-green-100 border-2 border-green-500 rounded flex items-center justify-center text-xs font-bold">
+                                5</div>
+                            <span><strong>Kaayusan</strong> - Organization & format</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div
+                                class="w-6 h-6 bg-amber-100 border-2 border-amber-500 rounded flex items-center justify-center text-xs font-bold">
+                                5</div>
+                            <span><strong>Kaangkupan</strong> - Appropriateness</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-3">Correction Types:</h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex items-center gap-2">
+                            <div class="w-4 h-4 bg-red-200 border-b-2 border-red-500 rounded"></div>
+                            <span>Spelling/Error</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-4 h-4 bg-green-200 border-b-2 border-green-500 rounded"></div>
+                            <span>Grammar</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-4 h-4 bg-blue-200 border-b-2 border-blue-500 rounded"></div>
+                            <span>Style/Clarity</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-3 bg-white rounded-2xl shadow-2xl p-8">
+                <div class="flex items-center gap-3 mb-6">
+                    <span class="text-3xl">📊</span>
+                    <h2 class="text-2xl font-bold text-purple-700">Results & Evaluation</h2>
+                </div>
+
+                <div class="flex border-b-2 border-gray-200 mb-6">
+                    <button class="tab-btn px-6 py-3 font-semibold text-purple-600 border-b-4 border-purple-600"
+                        data-tab="editor" onclick="switchTab('editor')">✏️ Editor</button>
+                    <button class="tab-btn px-6 py-3 font-semibold text-gray-500 border-b-4 border-transparent"
+                        data-tab="feedback" onclick="switchTab('feedback')">📋 Feedback</button>
+                </div>
+
+                <div id="loading" class="hidden text-center py-20">
+                    <div
+                        class="inline-block w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin">
+                    </div>
+                    <p class="mt-4 text-purple-600 font-semibold">Sinusuri ang papel gamit ang rubric...</p>
+                </div>
+
+                <div id="editorTab" class="tab-content">
+                    <div id="correctionsSummary" class="hidden mb-4 flex gap-3 flex-wrap"></div>
+
+                    <div class="bg-white rounded-lg overflow-hidden mb-4 shadow">
+                        <div class="bg-gray-100 px-6 py-2 border-b flex justify-between">
+                            <span class="text-sm text-gray-600 font-medium">Document</span>
+                            <div class="flex gap-2">
+                                <button onclick="changeFontSize(-1)"
+                                    class="text-gray-600 hover:text-gray-800 px-2">-</button>
+                                <span class="text-xs text-gray-500 px-2 py-1" id="fontDisplay">12pt</span>
+                                <button onclick="changeFontSize(1)"
+                                    class="text-gray-600 hover:text-gray-800 px-2">+</button>
+                            </div>
+                        </div>
+                        <div id="editor"
+                            class="editor-content custom-scrollbar p-12 min-h-96 max-h-[600px] overflow-y-auto">
+                            <p class="text-gray-400 italic text-center py-20">Click "Check & Grade" to start</p>
+                        </div>
+                    </div>
+
+                    <div id="actionButtons" class="hidden flex gap-3">
+                        <button onclick="acceptAll()"
+                            class="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold py-3 rounded-lg">✅
+                            Accept All</button>
+                        <button onclick="rejectAll()"
+                            class="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold py-3 rounded-lg">❌ Reject
+                            All</button>
+                        <button onclick="copyText()"
+                            class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 rounded-lg">📋
+                            Copy</button>
+                    </div>
+                </div>
+
+                <div id="feedbackTab" class="tab-content hidden">
+                    <div id="gradeDisplay" class="hidden mb-6">
+                        <div class="grade-display mb-4">
+                            <div class="text-sm uppercase opacity-90 mb-2">Kabuuang Marka</div>
+                            <div class="grade-score" id="gradeScore">--/20</div>
+                            <div id="percentageScore" class="text-2xl mt-2 opacity-90"></div>
+                        </div>
+
+                        <div id="rubricBreakdown" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div class="rubric-card border-purple-300">
+                                <div class="flex justify-between items-center mb-2">
+                                    <h4 class="font-bold text-purple-700 flex items-center gap-2">
+                                        <span class="text-2xl">📝</span>
+                                        <span>Nilalaman</span>
+                                    </h4>
+                                    <span id="scoreNilalaman" class="rubric-score text-purple-600">-/5</span>
+                                </div>
+                                <p id="feedbackNilalaman" class="text-sm text-gray-600 mt-2"></p>
+                            </div>
+
+                            <div class="rubric-card border-blue-300">
+                                <div class="flex justify-between items-center mb-2">
+                                    <h4 class="font-bold text-blue-700 flex items-center gap-2">
+                                        <span class="text-2xl">🔗</span>
+                                        <span>Kaisahan</span>
+                                    </h4>
+                                    <span id="scoreKaisahan" class="rubric-score text-blue-600">-/5</span>
+                                </div>
+                                <p id="feedbackKaisahan" class="text-sm text-gray-600 mt-2"></p>
+                            </div>
+
+                            <div class="rubric-card border-green-300">
+                                <div class="flex justify-between items-center mb-2">
+                                    <h4 class="font-bold text-green-700 flex items-center gap-2">
+                                        <span class="text-2xl">📐</span>
+                                        <span>Kaayusan</span>
+                                    </h4>
+                                    <span id="scoreKaayusan" class="rubric-score text-green-600">-/5</span>
+                                </div>
+                                <p id="feedbackKaayusan" class="text-sm text-gray-600 mt-2"></p>
+                            </div>
+
+                            <div class="rubric-card border-amber-300">
+                                <div class="flex justify-between items-center mb-2">
+                                    <h4 class="font-bold text-amber-700 flex items-center gap-2">
+                                        <span class="text-2xl">🎯</span>
+                                        <span>Kaangkupan</span>
+                                    </h4>
+                                    <span id="scoreKaangkupan" class="rubric-score text-amber-600">-/5</span>
+                                </div>
+                                <p id="feedbackKaangkupan" class="text-sm text-gray-600 mt-2"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div id="strengthsSection" class="hidden">
+                            <h3 class="text-lg font-bold text-green-700 mb-3 flex items-center gap-2">
+                                <span class="text-2xl">✅</span>
+                                <span>Kalakasan</span>
+                            </h3>
+                            <div id="strengthsList"></div>
+                        </div>
+                        <div id="improvementsSection" class="hidden">
+                            <h3 class="text-lg font-bold text-amber-700 mb-3 flex items-center gap-2">
+                                <span class="text-2xl">💡</span>
+                                <span>Dapat Pagbutihin</span>
+                            </h3>
+                            <div id="improvementsList"></div>
+                        </div>
+                    </div>
+
+                    <h3 class="text-lg font-bold text-purple-700 mb-3 flex items-center gap-2">
+                        <span class="text-2xl">📋</span>
+                        <span>Detalyadong Feedback</span>
+                    </h3>
+                    <div id="feedback"
+                        class="bg-gray-50 rounded-lg p-6 max-h-[400px] overflow-y-auto custom-scrollbar whitespace-pre-wrap text-sm leading-relaxed border-2 border-gray-200">
+                        <p class="text-gray-400 italic text-center py-20">Ang feedback ay lalabas dito...</p>
+                    </div>
+                </div>
+
+                <div id="stats" class="hidden mt-6 flex gap-4 flex-wrap">
+                    <div class="bg-purple-50 px-4 py-2 rounded-lg">
+                        <span class="font-semibold text-purple-700">Tokens:</span>
+                        <span id="totalTokens" class="ml-2">0</span>
+                    </div>
+                    <div class="bg-purple-50 px-4 py-2 rounded-lg">
+                        <span class="font-semibold text-purple-700">Time:</span>
+                        <span id="processingTime" class="ml-2">0</span>s
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tooltip" class="hidden tooltip-fixed custom-scrollbar">
+        <div class="flex items-center gap-2 mb-4 pb-3 border-b-2">
+            <span id="tipIcon" class="text-2xl">⚠️</span>
+            <h3 id="tipType" class="font-bold text-lg">Correction</h3>
+        </div>
+
+        <div class="tooltip-box tooltip-original">
+            <div class="tooltip-label">❌ Original:</div>
+            <div id="tipOriginal" class="tooltip-text"></div>
+        </div>
+
+        <div class="tooltip-box tooltip-suggestion">
+            <div class="tooltip-label">✅ Suggestion:</div>
+            <div id="tipSuggestion" class="tooltip-text"></div>
+        </div>
+
+        <div class="tooltip-box tooltip-explanation">
+            <div class="tooltip-label">📝 Explanation:</div>
+            <div id="tipExplanation" class="tooltip-text"></div>
+        </div>
+
+        <div class="flex gap-2 mt-4">
+            <button onclick="accept()" class="btn btn-accept">✓ Accept</button>
+            <button onclick="reject()" class="btn btn-reject">✗ Reject</button>
+            <button onclick="hideTooltip()" class="btn btn-skip">Skip</button>
+        </div>
+    </div>
+
+    <script>
+        const $ = id => document.getElementById(id);
+        const essay = $('essay'), editor = $('editor'), feedback = $('feedback');
+        let corrections = [], currentIdx = null, originalEssay = "", fontSize = 12, hoverEl = null;
+
+        essay.oninput = () => $('charCount').textContent = essay.value.length.toLocaleString();
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.toggle('text-purple-600', b.dataset.tab === tab);
+                b.classList.toggle('border-purple-600', b.dataset.tab === tab);
+                b.classList.toggle('text-gray-500', b.dataset.tab !== tab);
+                b.classList.toggle('border-transparent', b.dataset.tab !== tab);
+            });
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('hidden', !c.id.startsWith(tab)));
+        }
+
+        function changeFontSize(delta) {
+            fontSize = Math.max(10, Math.min(16, fontSize + delta));
+            editor.style.fontSize = fontSize + 'pt';
+            $('fontDisplay').textContent = fontSize + 'pt';
+        }
+
+        function loadSample() {
+            essay.value = `Pamagat: Ang Epekto ng Social Media sa Akademikong Pagganap ng mga Mag-aaral
+
+Panimula:
+Sa kasalukuyang panahon, ang social media ay naging bahagi ng pang-araw-araw na buhay ng mga kabataan. Maraming mag-aaral ang gumagamit nito para sa komunikasyon at impormasyon. Ngunit may mga pag-aaral na nagpapakita na ito ay may epekto sa kanilang pag-aaral.
+
+Suliranin:
+Ang labis na paggamit ng social media ay nakaaapekto sa oras ng pag-aaral ng mga estudyante. Marami sa kanila ay mas gugustuhing mag-scroll sa Facebook o TikTok kaysa magbasa ng kanilang mga aklat.
+
+Layunin:
+Ang pag-aaral na ito ay naglalayong suriin ang epekto ng social media sa akademikong pagganap ng mga mag-aaral sa senior high school. Layon ding tukuyin ang oras na ginugugol sa social media at magmungkahi ng mga solusyon.
+
+Metodolohiya:
+Gagamitin ang survey questionnaire upang makolekta ang datos mula sa 100 na mag-aaral ng senior high school. Ang mga datos ay susuriin gamit ang statistical analysis upang makuha ang resulta.`;
+            essay.oninput();
+        }
+
+        async function checkEssay() {
+            const text = essay.value.trim();
+            if (!text) return alert("⚠️ Pakipasok ang konseptong papel");
+
+            originalEssay = text;
+            corrections = [];
+            $('loading').classList.remove('hidden');
+            $('checkBtn').disabled = true;
+            $('checkBtn').textContent = '⏳ Checking...';
+
+            try {
+                const res = await fetch("http://localhost:3000/check", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ essay: text })
+                });
+
+                const data = await res.json();
+                console.log("Received data:", data);
+
+                if (res.ok) {
+                    feedback.textContent = data.feedback;
+
+                    if (data.grade) {
+                        $('gradeScore').textContent = data.grade;
+
+                        if (data.total_score) {
+                            const percentage = Math.round((data.total_score / 20) * 100);
+                            $('percentageScore').textContent = `(${percentage}%)`;
+                        }
+
+                        $('gradeDisplay').classList.remove('hidden');
+
+                        if (data.rubric_scores) {
+                            const categoryMap = {
+                                'nilalaman': 'Nilalaman',
+                                'kaisahan': 'Kaisahan',
+                                'kaayusan': 'Kaayusan',
+                                'kaangkupan': 'Kaangkupan'
+                            };
+
+                            Object.keys(categoryMap).forEach(key => {
+                                const displayName = categoryMap[key];
+                                const scoreEl = $('score' + displayName);
+                                const feedbackEl = $('feedback' + displayName);
+
+                                if (scoreEl) {
+                                    const score = data.rubric_scores[key];
+                                    if (score !== undefined && score !== null) {
+                                        scoreEl.textContent = `${score}/5`;
+                                        console.log(`✓ Set ${displayName}: ${score}/5`);
+                                    } else {
+                                        console.warn(`⚠ No score for ${key}`);
+                                    }
+                                }
+
+                                if (feedbackEl && data.rubric_feedback && data.rubric_feedback[key]) {
+                                    feedbackEl.textContent = data.rubric_feedback[key];
+                                }
+                            });
+                        } else {
+                            console.warn("⚠ No rubric_scores in response");
+                        }
+                    } else {
+                        $('gradeDisplay').classList.add('hidden');
+                    }
+
+                    if (data.strengths?.length) {
+                        $('strengthsList').innerHTML = data.strengths.map(s => `<div class="strength-item"><span class="text-xl">✓</span><span>${esc(s)}</span></div>`).join('');
+                        $('strengthsSection').classList.remove('hidden');
+                    } else {
+                        $('strengthsSection').classList.add('hidden');
+                    }
+
+                    if (data.improvements?.length) {
+                        $('improvementsList').innerHTML = data.improvements.map(i => `<div class="improvement-item"><span class="text-xl">→</span><span>${esc(i)}</span></div>`).join('');
+                        $('improvementsSection').classList.remove('hidden');
+                    } else {
+                        $('improvementsSection').classList.add('hidden');
+                    }
+
+                    if (data.corrections?.length) {
+                        corrections = data.corrections.map(c => ({ ...c, accepted: null }));
+                        render();
+                        $('actionButtons').classList.remove('hidden');
+                    } else {
+                        editor.innerHTML = '<p class="text-green-600 font-bold text-center mb-4">✅ Walang nakitang errors!</p>' + formatText(text);
+                    }
+
+                    if (data.usage) {
+                        $('totalTokens').textContent = data.usage.totalTokens;
+                        $('processingTime').textContent = data.processingTime;
+                        $('stats').classList.remove('hidden');
+                    }
+                    switchTab('feedback');
+                } else {
+                    editor.innerHTML = feedback.innerHTML = `<p class="text-red-500 text-center">❌ ${data.error}</p>`;
+                }
+            } catch (e) {
+                console.error("Request error:", e);
+                editor.innerHTML = feedback.innerHTML = `<p class="text-red-500 text-center">❌ Connection Error: ${e.message}</p>`;
+            } finally {
+                $('loading').classList.add('hidden');
+                $('checkBtn').disabled = false;
+                $('checkBtn').textContent = '🔍 Check & Grade';
+            }
+        }
+
+        function render() {
+            const pending = corrections.filter(c => c.accepted === null);
+            if (!pending.length) {
+                editor.innerHTML = '<p class="text-green-600 font-bold text-center mb-4">✅ All corrections processed!</p>' + formatText(getFinalText());
+                $('actionButtons').classList.add('hidden');
+                return;
+            }
+
+            let html = '', pos = 0;
+            pending.sort((a, b) => a.position - b.position).forEach(c => {
+                const idx = corrections.indexOf(c);
+                html += esc(originalEssay.substring(pos, c.position));
+                html += `<span class="correction ${c.type}" data-i="${idx}">${esc(c.original)}</span>`;
+                pos = c.position + c.original.length;
+            });
+            html += esc(originalEssay.substring(pos));
+            editor.innerHTML = formatText(html);
+
+            document.querySelectorAll('.correction').forEach(el => {
+                const i = +el.dataset.i, c = corrections[i];
+                el.onclick = e => { e.stopPropagation(); showTooltip(i); };
+                el.onmouseenter = () => showHover(c, el);
+                el.onmouseleave = hideHover;
+            });
+
+            updateSummary();
+        }
+
+        function showHover(c, el) {
+            hideHover();
+            const icons = { error: '❌', grammar: '✏️', style: '💡' };
+            hoverEl = document.createElement('div');
+            hoverEl.className = 'hover-popup';
+            hoverEl.innerHTML = `
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem">
+                <span style="font-size:1.2rem">${icons[c.type]}</span>
+                <span class="hover-type ${c.type}">${c.type}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.875rem">
+                <span class="hover-from">${esc(c.original)}</span>
+                <span style="color:#9ca3af">→</span>
+                <span class="hover-to">${esc(c.suggestion)}</span>
+            </div>
+            <div style="font-size:0.7rem;color:#9ca3af;text-align:center;margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid #e5e7eb">💡 Click for details</div>
+        `;
+            document.body.appendChild(hoverEl);
+
+            const rect = el.getBoundingClientRect();
+            let left = rect.left + rect.width / 2 - 140;
+            let top = rect.bottom + 8;
+            left = Math.max(10, Math.min(left, window.innerWidth - 290));
+            if (top + 100 > window.innerHeight) top = rect.top - 100;
+            hoverEl.style.left = left + 'px';
+            hoverEl.style.top = top + window.scrollY + 'px';
+        }
+
+        function hideHover() {
+            if (hoverEl) { hoverEl.remove(); hoverEl = null; }
+        }
+
+        function showTooltip(i) {
+            currentIdx = i;
+            const c = corrections[i];
+            const icons = { error: '❌', grammar: '✏️', style: '💡' };
+            const types = { error: 'Spelling Error', grammar: 'Grammar Issue', style: 'Style Suggestion' };
+            $('tipIcon').textContent = icons[c.type];
+            $('tipType').textContent = types[c.type];
+            $('tipOriginal').textContent = c.original;
+            $('tipSuggestion').textContent = c.suggestion;
+            $('tipExplanation').textContent = c.explanation;
+            $('tooltip').classList.remove('hidden');
+            hideHover();
+        }
+
+        function hideTooltip() {
+            $('tooltip').classList.add('hidden');
+            currentIdx = null;
+        }
+
+        function accept() {
+            if (currentIdx === null) return;
+            const c = corrections[currentIdx];
+            if (c.accepted !== null) return hideTooltip();
+
+            c.accepted = true;
+            originalEssay = originalEssay.substring(0, c.position) + c.suggestion + originalEssay.substring(c.position + c.original.length);
+
+            const diff = c.suggestion.length - c.original.length;
+            corrections.forEach(x => { if (x.position > c.position && x.accepted === null) x.position += diff; });
+
+            essay.value = originalEssay;
+            essay.oninput();
+            hideTooltip();
+            render();
+        }
+
+        function reject() {
+            if (currentIdx === null) return;
+            if (corrections[currentIdx].accepted !== null) return hideTooltip();
+            corrections[currentIdx].accepted = false;
+            hideTooltip();
+            render();
+        }
+
+        function acceptAll() {
+            let changed = false;
+            corrections.forEach(c => { if (c.accepted === null) { c.accepted = true; changed = true; } });
+            if (!changed) return alert("✅ Already processed");
+            applyAccepted();
+            render();
+            hideTooltip();
+        }
+
+        function rejectAll() {
+            let changed = false;
+            corrections.forEach(c => { if (c.accepted === null) { c.accepted = false; changed = true; } });
+            if (!changed) return alert("✅ Already processed");
+            render();
+            hideTooltip();
+        }
+
+        function applyAccepted() {
+            corrections.filter(c => c.accepted).sort((a, b) => b.position - a.position).forEach(c => {
+                originalEssay = originalEssay.substring(0, c.position) + c.suggestion + originalEssay.substring(c.position + c.original.length);
+            });
+            essay.value = originalEssay;
+            essay.oninput();
+        }
+
+        function getFinalText() {
+            let text = originalEssay;
+            corrections.filter(c => c.accepted).sort((a, b) => b.position - a.position).forEach(c => {
+                text = text.substring(0, c.position) + c.suggestion + text.substring(c.position + c.original.length);
+            });
+            return text;
+        }
+
+        function copyText() {
+            navigator.clipboard.writeText(getFinalText()).then(() => alert("✅ Nakopya na!"));
+        }
+
+        function updateSummary() {
+            const pending = corrections.filter(c => c.accepted === null).length;
+            const accepted = corrections.filter(c => c.accepted).length;
+            const rejected = corrections.filter(c => c.accepted === false).length;
+
+            if (!pending && !accepted && !rejected) return $('correctionsSummary').classList.add('hidden');
+
+            let html = '';
+            if (pending) html += `<div class="bg-yellow-100 text-yellow-800 px-4 py-2 rounded-lg font-semibold">${pending} Pending</div>`;
+            if (accepted) html += `<div class="bg-green-100 text-green-800 px-4 py-2 rounded-lg font-semibold">${accepted} Accepted</div>`;
+            if (rejected) html += `<div class="bg-red-100 text-red-800 px-4 py-2 rounded-lg font-semibold">${rejected} Rejected</div>`;
+
+            $('correctionsSummary').innerHTML = html;
+            $('correctionsSummary').classList.remove('hidden');
+        }
+
+        function formatText(text) {
+            return text.split(/\n\n+/).map(p => p.trim() ? `<p>${p}</p>` : '').join('');
+        }
+
+        function esc(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function clearAll() {
+            essay.value = "";
+            editor.innerHTML = '<p class="text-gray-400 italic text-center py-20">Click "Check & Grade" to start</p>';
+            feedback.innerHTML = '<p class="text-gray-400 italic text-center py-20">Ang feedback ay lalabas dito...</p>';
+            ['stats', 'correctionsSummary', 'actionButtons', 'gradeDisplay', 'strengthsSection', 'improvementsSection'].forEach(id => $(id).classList.add('hidden'));
+            $('charCount').textContent = "0";
+            $('gradeScore').textContent = '--';
+            $('totalScore').textContent = '';
+            ['Nilalaman', 'Kaisahan', 'Kaayusan', 'Kaangkupan'].forEach(cat => {
+                $('score' + cat).textContent = '-/5';
+                $('feedback' + cat).textContent = '';
+            });
+            corrections = [];
+            originalEssay = "";
+            hideTooltip();
+            hideHover();
+        }
+
+        document.onclick = e => { if (!e.target.closest('.correction') && !e.target.closest('#tooltip')) hideTooltip(); };
+        essay.onkeydown = e => { if (e.ctrlKey && e.key === 'Enter') checkEssay(); };
+    </script>
+</body>
+
+</html>
