@@ -44,6 +44,7 @@ Get your API key from: https://console.groq.com
 ### 3. Start the Server
 
 ```bash
+cd backend
 npm start
 ```
 
@@ -57,7 +58,6 @@ Open `frontend/index.html` in your browser
 AITEST/
 ├── backend/
 │   ├── server.js           # Main server
-│   ├── check_limits.js     # API limit checker
 │   ├── package.json
 │   └── .env               # API keys (not tracked)
 ├── frontend/
@@ -77,7 +77,7 @@ AITEST/
 ## 🛠️ Technologies
 
 - **Backend**: Node.js, Express
-- **AI**: Groq API (Llama 3.3 70B)
+- **AI**: Groq API (Llama 3.3 70B-Versatile)
 - **Frontend**: HTML, Tailwind CSS, Vanilla JS
 
 ## 📊 Grading Rubric
